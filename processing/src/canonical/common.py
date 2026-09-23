@@ -1,4 +1,4 @@
-"""Common primitives for geometry, positioning, styling, and metadata."""
+"""Common primitives for canonical geometry, positioning, styling, and metadata."""
 
 from enum import Enum
 from typing import Optional

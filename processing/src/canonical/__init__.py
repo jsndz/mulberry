@@ -1,12 +1,8 @@
-"""Mulberry Processing Engine & Canonical Document Model.
+"""Mulberry Canonical JSON & Document Representation Module."""
 
-This package defines the canonical document model for Mulberry, enabling
-local-first processing of handwritten/scanned images and PDFs into digital notes.
-"""
-
-from processing.models.common import BoundingBox, Point, Color, CoordinateUnit, SourceMedia
-from processing.models.text import TextElement, TextKind, TextStyle
-from processing.models.diagram import (
+from processing.canonical.common import BoundingBox, Point, Color, CoordinateUnit, SourceMedia
+from processing.canonical.text import TextElement, TextKind, TextStyle
+from processing.canonical.diagram import (
     DiagramElement,
     DiagramCategory,
     DiagramPrimitive,
@@ -19,8 +15,15 @@ from processing.models.diagram import (
     StructuredDiagramData,
     IllustratedDiagramData,
 )
-from processing.models.element import DocumentElement, BaseElement
-from processing.models.document import Document, Page, DocumentMetadata
+from processing.canonical.element import (
+    DocumentElement,
+    BaseElement,
+    ImageElement,
+    TableElement,
+    EquationElement,
+)
+from processing.canonical.document import Document, Page, DocumentMetadata
+from processing.canonical.exporter import generate_json_schema, create_realistic_example
 
 __all__ = [
     "BoundingBox",
@@ -44,13 +47,12 @@ __all__ = [
     "IllustratedDiagramData",
     "DocumentElement",
     "BaseElement",
+    "ImageElement",
+    "TableElement",
+    "EquationElement",
     "Document",
     "Page",
     "DocumentMetadata",
+    "generate_json_schema",
+    "create_realistic_example",
 ]
-
-__version__ = "0.1.0"
-
-
-def main():
-    print("Mulberry processing module initialized.")

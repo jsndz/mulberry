@@ -1269,7 +1269,7 @@
       "type": "object"
     },
     "TextElement": {
-      "description": "Canonical representation of a text block in a document.\n\nSupports headings, paragraphs, bullet points, and numbered list items with exact\npositioning and OCR confidence metrics.",
+      "description": "Canonical representation of a text block in a document.",
       "properties": {
         "id": {
           "description": "Unique identifier for the text element",

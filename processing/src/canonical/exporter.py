@@ -1,13 +1,13 @@
-"""Schema export, TypeScript generator, and realistic document sample builder."""
+"""Schema export, TypeScript generator, and realistic document sample builder for Canonical JSON model."""
 
 import json
 from pathlib import Path
 from typing import Dict, Any
 
-from processing.models.document import Document, Page, DocumentMetadata
-from processing.models.common import BoundingBox, Color, CoordinateUnit, SourceMedia
-from processing.models.text import TextElement, TextKind, TextStyle
-from processing.models.diagram import (
+from processing.canonical.document import Document, Page, DocumentMetadata
+from processing.canonical.common import BoundingBox, Color, CoordinateUnit, SourceMedia
+from processing.canonical.text import TextElement, TextKind, TextStyle
+from processing.canonical.diagram import (
     DiagramElement,
     DiagramCategory,
     BoxPrimitive,
@@ -57,7 +57,6 @@ def create_realistic_example() -> Document:
                     dpi=300,
                 ),
                 elements=[
-                    # 1. Heading
                     TextElement(
                         id="elem_head_1",
                         kind=TextKind.HEADING,
@@ -72,7 +71,6 @@ def create_realistic_example() -> Document:
                             color=Color(hex="#1E293B", alpha=1.0),
                         ),
                     ),
-                    # 2. Paragraph
                     TextElement(
                         id="elem_para_1",
                         kind=TextKind.PARAGRAPH,
@@ -86,7 +84,6 @@ def create_realistic_example() -> Document:
                             color=Color(hex="#334155", alpha=1.0),
                         ),
                     ),
-                    # 3. Bullet list items
                     TextElement(
                         id="elem_bullet_1",
                         kind=TextKind.BULLET,
@@ -111,7 +108,6 @@ def create_realistic_example() -> Document:
                         position=BoundingBox(x=120.0, y=250.0, width=600.0, height=25.0, unit=CoordinateUnit.PX),
                         confidence=0.93,
                     ),
-                    # 4. Structured Diagram (Flowchart / Architecture)
                     DiagramElement(
                         id="elem_diag_struct_1",
                         category=DiagramCategory.STRUCTURED,
@@ -195,7 +191,6 @@ def create_realistic_example() -> Document:
                             ]
                         ),
                     ),
-                    # 5. Heading for Illustrated Section
                     TextElement(
                         id="elem_head_2",
                         kind=TextKind.HEADING,
@@ -210,7 +205,6 @@ def create_realistic_example() -> Document:
                             color=Color(hex="#1E293B", alpha=1.0),
                         ),
                     ),
-                    # 6. Illustrated Diagram
                     DiagramElement(
                         id="elem_diag_illust_1",
                         category=DiagramCategory.ILLUSTRATED,
@@ -225,7 +219,6 @@ def create_realistic_example() -> Document:
                             alt_text="A complex handwritten draft illustrating the dual pane editor and sidebar layout.",
                         ),
                     ),
-                    # 7. Numbered List Section
                     TextElement(
                         id="elem_num_1",
                         kind=TextKind.NUMBERED_LIST,
@@ -249,234 +242,3 @@ def create_realistic_example() -> Document:
         ],
     )
     return doc
-
-
-def generate_typescript_definitions() -> str:
-    """Generate matching TypeScript type definitions for frontend React applications."""
-    return """/**
- * Mulberry Canonical Document Model TypeScript Definitions
- * Auto-aligned with Pydantic V2 Document Schema
- */
-
-export type CoordinateUnit = 'px' | 'pt' | 'normalized' | 'mm' | 'in';
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  unit?: CoordinateUnit;
-}
-
-export interface Color {
-  hex: string;
-  alpha?: number;
-}
-
-export interface SourceMedia {
-  file_path?: string;
-  media_type: string;
-  original_page_number?: number;
-  dpi?: number;
-}
-
-// --- Text Element ---
-
-export type TextKind = 'heading' | 'paragraph' | 'bullet' | 'numbered_list';
-
-export interface TextStyle {
-  font_family?: string;
-  font_size?: number;
-  font_weight?: string;
-  italic?: boolean;
-  color?: Color;
-}
-
-export interface TextElement {
-  id: string;
-  type: 'text';
-  kind: TextKind;
-  content: string;
-  position: BoundingBox;
-  confidence?: number;
-  heading_level?: number;
-  list_level?: number;
-  list_index?: number;
-  style?: TextStyle;
-  metadata?: Record<string, unknown>;
-}
-
-// --- Diagram Primitives ---
-
-export type DiagramPrimitiveType = 'box' | 'circle' | 'line' | 'arrow' | 'label' | 'connection';
-
-export interface BasePrimitive {
-  id: string;
-  confidence?: number;
-}
-
-export interface BoxPrimitive extends BasePrimitive {
-  primitive_type: 'box';
-  position: BoundingBox;
-  label?: string;
-  fill_color?: Color;
-  stroke_color?: Color;
-  stroke_width?: number;
-  corner_radius?: number;
-}
-
-export interface CirclePrimitive extends BasePrimitive {
-  primitive_type: 'circle';
-  position: BoundingBox;
-  label?: string;
-  fill_color?: Color;
-  stroke_color?: Color;
-  stroke_width?: number;
-}
-
-export interface LinePrimitive extends BasePrimitive {
-  primitive_type: 'line';
-  points: Point[];
-  stroke_color?: Color;
-  stroke_width?: number;
-  style?: string;
-}
-
-export interface ArrowPrimitive extends BasePrimitive {
-  primitive_type: 'arrow';
-  start_point: Point;
-  end_point: Point;
-  has_head_at_start?: boolean;
-  has_head_at_end?: boolean;
-  label?: string;
-  stroke_color?: Color;
-  stroke_width?: number;
-}
-
-export interface LabelPrimitive extends BasePrimitive {
-  primitive_type: 'label';
-  text: string;
-  position: BoundingBox;
-  font_size?: number;
-  color?: Color;
-}
-
-export interface ConnectionPrimitive extends BasePrimitive {
-  primitive_type: 'connection';
-  source_node_id: string;
-  target_node_id: string;
-  connection_type?: string;
-  label?: string;
-  directional?: boolean;
-}
-
-export type DiagramPrimitive =
-  | BoxPrimitive
-  | CirclePrimitive
-  | LinePrimitive
-  | ArrowPrimitive
-  | LabelPrimitive
-  | ConnectionPrimitive;
-
-// --- Diagram Element ---
-
-export type DiagramCategory = 'structured' | 'illustrated';
-
-export interface StructuredDiagramData {
-  primitives: DiagramPrimitive[];
-}
-
-export interface IllustratedDiagramData {
-  image_ref: string;
-  mime_type?: string;
-  width?: number;
-  height?: number;
-  caption?: string;
-  alt_text?: string;
-}
-
-export interface DiagramElement {
-  id: string;
-  type: 'diagram';
-  category: DiagramCategory;
-  position: BoundingBox;
-  confidence?: number;
-  structured_data?: StructuredDiagramData;
-  illustrated_data?: IllustratedDiagramData;
-  metadata?: Record<string, unknown>;
-}
-
-// --- Future Extensibility Stubs ---
-
-export interface ImageElement {
-  id: string;
-  type: 'image';
-  position: BoundingBox;
-  confidence?: number;
-  image_ref: string;
-  caption?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface TableElement {
-  id: string;
-  type: 'table';
-  position: BoundingBox;
-  confidence?: number;
-  headers: string[];
-  rows: string[][];
-  caption?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface EquationElement {
-  id: string;
-  type: 'equation';
-  position: BoundingBox;
-  confidence?: number;
-  latex: string;
-  display_mode: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-// Discriminated Polymorphic Document Element Union
-export type DocumentElement =
-  | TextElement
-  | DiagramElement
-  | ImageElement
-  | TableElement
-  | EquationElement;
-
-// --- Page & Document Root ---
-
-export interface Page {
-  page_number: number;
-  width: number;
-  height: number;
-  unit: CoordinateUnit;
-  source_media?: SourceMedia;
-  elements: DocumentElement[];
-}
-
-export interface DocumentMetadata {
-  title?: string;
-  author?: string;
-  created_at?: string;
-  updated_at?: string;
-  source_file?: string;
-  generator_version: string;
-  extra_metadata?: Record<string, unknown>;
-}
-
-export interface Document {
-  version: string;
-  id: string;
-  metadata: DocumentMetadata;
-  pages: Page[];
-}
-"""

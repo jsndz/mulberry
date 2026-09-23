@@ -1,10 +1,10 @@
-"""Element hierarchy and discriminated polymorphic union for Mulberry canonical models."""
+"""Canonical element hierarchy and discriminated polymorphic union for Mulberry."""
 
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field
-from processing.models.common import BoundingBox
-from processing.models.text import TextElement
-from processing.models.diagram import DiagramElement
+from processing.canonical.common import BoundingBox
+from processing.canonical.text import TextElement
+from processing.canonical.diagram import DiagramElement
 
 
 class BaseElement(BaseModel):
@@ -18,9 +18,6 @@ class BaseElement(BaseModel):
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Extensible key-value metadata for non-canonical attributes"
     )
-
-
-# --- Future Element Types (Extensibility Stubs) ---
 
 
 class ImageElement(BaseElement):
@@ -48,7 +45,6 @@ class EquationElement(BaseElement):
     display_mode: bool = Field(default=True, description="True for block display, False for inline")
 
 
-# Polymorphic Union of Document Elements using Pydantic v2 Discriminator
 DocumentElement = Annotated[
     Union[
         TextElement,

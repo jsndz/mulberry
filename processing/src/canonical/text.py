@@ -1,9 +1,9 @@
-"""Text element definitions for Mulberry canonical document model."""
+"""Canonical text element definitions for Mulberry document model."""
 
 from enum import Enum
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
-from processing.models.common import BoundingBox, Color
+from processing.canonical.common import BoundingBox, Color
 
 
 class TextKind(str, Enum):
@@ -26,11 +26,7 @@ class TextStyle(BaseModel):
 
 
 class TextElement(BaseModel):
-    """Canonical representation of a text block in a document.
-
-    Supports headings, paragraphs, bullet points, and numbered list items with exact
-    positioning and OCR confidence metrics.
-    """
+    """Canonical representation of a text block in a document."""
 
     id: str = Field(..., description="Unique identifier for the text element")
     type: Literal["text"] = Field(default="text", description="Element type discriminator")
@@ -41,7 +37,6 @@ class TextElement(BaseModel):
         default=None, ge=0.0, le=1.0, description="OCR/AI extraction confidence score (0.0 - 1.0)"
     )
 
-    # Contextual hierarchy metadata
     heading_level: Optional[int] = Field(
         default=None, ge=1, le=6, description="Heading depth level (1-6) when kind is 'heading'"
     )

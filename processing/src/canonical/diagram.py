@@ -1,9 +1,9 @@
-"""Diagram element definitions for Mulberry canonical document model."""
+"""Canonical diagram element definitions for Mulberry document model."""
 
 from enum import Enum
 from typing import Annotated, List, Literal, Optional, Union
 from pydantic import BaseModel, Field, field_validator
-from processing.models.common import BoundingBox, Color, Point
+from processing.canonical.common import BoundingBox, Color, Point
 
 
 class DiagramCategory(str, Enum):
@@ -11,9 +11,6 @@ class DiagramCategory(str, Enum):
 
     STRUCTURED = "structured"
     ILLUSTRATED = "illustrated"
-
-
-# --- Structured Diagram Primitives ---
 
 
 class BasePrimitive(BaseModel):
@@ -96,7 +93,6 @@ class ConnectionPrimitive(BasePrimitive):
     directional: bool = Field(default=True, description="Whether connection is directed")
 
 
-# Tagged Union for Diagram Primitives
 DiagramPrimitive = Annotated[
     Union[
         BoxPrimitive,
@@ -108,9 +104,6 @@ DiagramPrimitive = Annotated[
     ],
     Field(discriminator="primitive_type"),
 ]
-
-
-# --- Diagram Category Payload Models ---
 
 
 class StructuredDiagramData(BaseModel):
@@ -130,9 +123,6 @@ class IllustratedDiagramData(BaseModel):
     height: Optional[float] = Field(default=None, ge=0.0, description="Original image height in pixels")
     caption: Optional[str] = Field(default=None, description="Text caption near or inside illustration")
     alt_text: Optional[str] = Field(default=None, description="Semantic description of drawing")
-
-
-# --- Top-level Diagram Element ---
 
 
 class DiagramElement(BaseModel):

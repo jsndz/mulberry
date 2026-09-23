@@ -1,10 +1,10 @@
-"""Document and Page hierarchy for Mulberry canonical document model."""
+"""Canonical document and page models for Mulberry."""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
-from processing.models.common import CoordinateUnit, SourceMedia
-from processing.models.element import DocumentElement
+from processing.canonical.common import CoordinateUnit, SourceMedia
+from processing.canonical.element import DocumentElement
 
 
 class DocumentMetadata(BaseModel):

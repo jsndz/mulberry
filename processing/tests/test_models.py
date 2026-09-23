@@ -4,7 +4,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from processing.models import (
+from processing.canonical import (
     Document,
     Page,
     DocumentMetadata,
@@ -27,8 +27,9 @@ from processing.models import (
     ImageElement,
     TableElement,
     EquationElement,
+    create_realistic_example,
+    generate_json_schema,
 )
-from processing.exporter import create_realistic_example, generate_json_schema
 
 
 class TestBoundingBox:
@@ -151,7 +152,6 @@ class TestDocumentSerialization:
         json_str = doc.model_dump_json()
         assert isinstance(json_str, str)
 
-        # Deserialize back to Document
         parsed_doc = Document.model_validate_json(json_str)
         assert parsed_doc.id == doc.id
         assert len(parsed_doc.pages) == 1
@@ -159,7 +159,6 @@ class TestDocumentSerialization:
         elements = parsed_doc.pages[0].elements
         assert len(elements) == 10
 
-        # Check polymorphic element discrimination
         assert elements[0].type == "text"
         assert elements[0].kind == TextKind.HEADING
         assert elements[5].type == "diagram"
