@@ -1,0 +1,1487 @@
+{
+  "$defs": {
+    "ArrowPrimitive": {
+      "description": "Structured arrow primitive linking geometry or indicating direction.",
+      "properties": {
+        "id": {
+          "description": "Unique primitive identifier within the diagram",
+          "title": "Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection confidence score for this primitive",
+          "title": "Confidence"
+        },
+        "primitive_type": {
+          "const": "arrow",
+          "default": "arrow",
+          "description": "Primitive type discriminator",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "start_point": {
+          "$ref": "#/$defs/Point",
+          "description": "Starting point of arrow line"
+        },
+        "end_point": {
+          "$ref": "#/$defs/Point",
+          "description": "Ending point of arrow line"
+        },
+        "has_head_at_start": {
+          "default": false,
+          "description": "Whether arrowhead exists at start point",
+          "title": "Has Head At Start",
+          "type": "boolean"
+        },
+        "has_head_at_end": {
+          "default": true,
+          "description": "Whether arrowhead exists at end point",
+          "title": "Has Head At End",
+          "type": "boolean"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text label associated with arrow",
+          "title": "Label"
+        },
+        "stroke_color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Arrow line color"
+        },
+        "stroke_width": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Arrow line thickness",
+          "title": "Stroke Width"
+        }
+      },
+      "required": [
+        "id",
+        "start_point",
+        "end_point"
+      ],
+      "title": "ArrowPrimitive",
+      "type": "object"
+    },
+    "BoundingBox": {
+      "description": "Exact spatial bounding box and position.\n\nPosition is anchored at the top-left corner of the bounding box.",
+      "properties": {
+        "x": {
+          "description": "X coordinate of top-left corner",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Y coordinate of top-left corner",
+          "title": "Y",
+          "type": "number"
+        },
+        "width": {
+          "description": "Width of bounding box",
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "description": "Height of bounding box",
+          "title": "Height",
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/CoordinateUnit",
+          "default": "px",
+          "description": "Unit of measurement for coordinates"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "BoxPrimitive": {
+      "description": "Structured rectangle/box shape primitive.",
+      "properties": {
+        "id": {
+          "description": "Unique primitive identifier within the diagram",
+          "title": "Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection confidence score for this primitive",
+          "title": "Confidence"
+        },
+        "primitive_type": {
+          "const": "box",
+          "default": "box",
+          "description": "Primitive type discriminator",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Bounding box of rectangle"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text label inside or associated with box",
+          "title": "Label"
+        },
+        "fill_color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fill color"
+        },
+        "stroke_color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Border color"
+        },
+        "stroke_width": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Border line thickness",
+          "title": "Stroke Width"
+        },
+        "corner_radius": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Rounded corner radius",
+          "title": "Corner Radius"
+        }
+      },
+      "required": [
+        "id",
+        "position"
+      ],
+      "title": "BoxPrimitive",
+      "type": "object"
+    },
+    "CirclePrimitive": {
+      "description": "Structured circle/ellipse shape primitive.",
+      "properties": {
+        "id": {
+          "description": "Unique primitive identifier within the diagram",
+          "title": "Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection confidence score for this primitive",
+          "title": "Confidence"
+        },
+        "primitive_type": {
+          "const": "circle",
+          "default": "circle",
+          "description": "Primitive type discriminator",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Bounding box enclosing circle/ellipse"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text label inside circle",
+          "title": "Label"
+        },
+        "fill_color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fill color"
+        },
+        "stroke_color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Border color"
+        },
+        "stroke_width": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Border line thickness",
+          "title": "Stroke Width"
+        }
+      },
+      "required": [
+        "id",
+        "position"
+      ],
+      "title": "CirclePrimitive",
+      "type": "object"
+    },
+    "Color": {
+      "description": "Color representation supporting hex codes or RGBA values.",
+      "properties": {
+        "hex": {
+          "description": "Hex color string, e.g., '#000000' or '#FF5733'",
+          "title": "Hex",
+          "type": "string"
+        },
+        "alpha": {
+          "default": 1.0,
+          "description": "Opacity from 0.0 to 1.0",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Alpha",
+          "type": "number"
+        }
+      },
+      "required": [
+        "hex"
+      ],
+      "title": "Color",
+      "type": "object"
+    },
+    "ConnectionPrimitive": {
+      "description": "Explicit node connection / graph edge primitive connecting two shapes.",
+      "properties": {
+        "id": {
+          "description": "Unique primitive identifier within the diagram",
+          "title": "Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection confidence score for this primitive",
+          "title": "Confidence"
+        },
+        "primitive_type": {
+          "const": "connection",
+          "default": "connection",
+          "description": "Primitive type discriminator",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "source_node_id": {
+          "description": "Primitive ID of source shape/node",
+          "title": "Source Node Id",
+          "type": "string"
+        },
+        "target_node_id": {
+          "description": "Primitive ID of target shape/node",
+          "title": "Target Node Id",
+          "type": "string"
+        },
+        "connection_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "arrow",
+          "description": "Connection type e.g. 'arrow', 'line', 'dashed_arrow'",
+          "title": "Connection Type"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Label attached to relationship edge",
+          "title": "Label"
+        },
+        "directional": {
+          "default": true,
+          "description": "Whether connection is directed",
+          "title": "Directional",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "source_node_id",
+        "target_node_id"
+      ],
+      "title": "ConnectionPrimitive",
+      "type": "object"
+    },
+    "CoordinateUnit": {
+      "description": "Unit of measurement for spatial coordinates.",
+      "enum": [
+        "px",
+        "pt",
+        "normalized",
+        "mm",
+        "in"
+      ],
+      "title": "CoordinateUnit",
+      "type": "string"
+    },
+    "DiagramCategory": {
+      "description": "Category of diagram.",
+      "enum": [
+        "structured",
+        "illustrated"
+      ],
+      "title": "DiagramCategory",
+      "type": "string"
+    },
+    "DiagramElement": {
+      "description": "Canonical representation of a diagram element.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for diagram element",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "diagram",
+          "default": "diagram",
+          "description": "Element type discriminator",
+          "title": "Type",
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/$defs/DiagramCategory",
+          "description": "Diagram category: 'structured' or 'illustrated'"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Exact outer bounding box of diagram on page"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Overall diagram detection confidence score (0.0 - 1.0)",
+          "title": "Confidence"
+        },
+        "structured_data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StructuredDiagramData"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Primitive geometry data if category is 'structured'"
+        },
+        "illustrated_data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IllustratedDiagramData"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cropped image reference if category is 'illustrated'"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "position"
+      ],
+      "title": "DiagramElement",
+      "type": "object"
+    },
+    "DocumentMetadata": {
+      "description": "Global document metadata.",
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Document title",
+          "title": "Title"
+        },
+        "author": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Document author or owner",
+          "title": "Author"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Creation timestamp (UTC)",
+          "title": "Created At"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Last updated timestamp (UTC)",
+          "title": "Updated At"
+        },
+        "source_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Original input filename or path",
+          "title": "Source File"
+        },
+        "generator_version": {
+          "default": "0.1.0",
+          "description": "Version of processing engine or schema that created document",
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "extra_metadata": {
+          "additionalProperties": true,
+          "description": "Arbitrary custom key-value metadata",
+          "title": "Extra Metadata",
+          "type": "object"
+        }
+      },
+      "title": "DocumentMetadata",
+      "type": "object"
+    },
+    "EquationElement": {
+      "description": "Future element type for mathematical formulas / equations.",
+      "properties": {
+        "id": {
+          "description": "Unique element identifier",
+          "title": "Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Exact bounding box position on page"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extraction confidence score",
+          "title": "Confidence"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Extensible key-value metadata for non-canonical attributes",
+          "title": "Metadata",
+          "type": "object"
+        },
+        "type": {
+          "const": "equation",
+          "default": "equation",
+          "description": "Element type discriminator",
+          "title": "Type",
+          "type": "string"
+        },
+        "latex": {
+          "description": "LaTeX expression of mathematical equation",
+          "title": "Latex",
+          "type": "string"
+        },
+        "display_mode": {
+          "default": true,
+          "description": "True for block display, False for inline",
+          "title": "Display Mode",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "position",
+        "latex"
+      ],
+      "title": "EquationElement",
+      "type": "object"
+    },
+    "IllustratedDiagramData": {
+      "description": "Payload for complex illustrated diagrams preserved via cropped image reference.",
+      "properties": {
+        "image_ref": {
+          "description": "Path, URI, asset ID, or Base64 data of cropped illustration",
+          "title": "Image Ref",
+          "type": "string"
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "image/png",
+          "description": "Image MIME type e.g. 'image/png'",
+          "title": "Mime Type"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Original image width in pixels",
+          "title": "Width"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Original image height in pixels",
+          "title": "Height"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text caption near or inside illustration",
+          "title": "Caption"
+        },
+        "alt_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Semantic description of drawing",
+          "title": "Alt Text"
+        }
+      },
+      "required": [
+        "image_ref"
+      ],
+      "title": "IllustratedDiagramData",
+      "type": "object"
+    },
+    "ImageElement": {
+      "description": "Future element type for standalone embedded images.",
+      "properties": {
+        "id": {
+          "description": "Unique element identifier",
+          "title": "Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Exact bounding box position on page"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extraction confidence score",
+          "title": "Confidence"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Extensible key-value metadata for non-canonical attributes",
+          "title": "Metadata",
+          "type": "object"
+        },
+        "type": {
+          "const": "image",
+          "default": "image",
+          "description": "Element type discriminator",
+          "title": "Type",
+          "type": "string"
+        },
+        "image_ref": {
+          "description": "Image URI, file path, or asset identifier",
+          "title": "Image Ref",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Image caption text",
+          "title": "Caption"
+        }
+      },
+      "required": [
+        "id",
+        "position",
+        "image_ref"
+      ],
+      "title": "ImageElement",
+      "type": "object"
+    },
+    "LabelPrimitive": {
+      "description": "Standalone structured text label primitive inside a diagram.",
+      "properties": {
+        "id": {
+          "description": "Unique primitive identifier within the diagram",
+          "title": "Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection confidence score for this primitive",
+          "title": "Confidence"
+        },
+        "primitive_type": {
+          "const": "label",
+          "default": "label",
+          "description": "Primitive type discriminator",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "text": {
+          "description": "Text content of label",
+          "title": "Text",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Position of label"
+        },
+        "font_size": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Font size",
+          "title": "Font Size"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text color"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "position"
+      ],
+      "title": "LabelPrimitive",
+      "type": "object"
+    },
+    "LinePrimitive": {
+      "description": "Structured straight or segmented line primitive.",
+      "properties": {
+        "id": {
+          "description": "Unique primitive identifier within the diagram",
+          "title": "Id",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Detection confidence score for this primitive",
+          "title": "Confidence"
+        },
+        "primitive_type": {
+          "const": "line",
+          "default": "line",
+          "description": "Primitive type discriminator",
+          "title": "Primitive Type",
+          "type": "string"
+        },
+        "points": {
+          "description": "Ordered sequence of points defining line/polyline",
+          "items": {
+            "$ref": "#/$defs/Point"
+          },
+          "minItems": 2,
+          "title": "Points",
+          "type": "array"
+        },
+        "stroke_color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line stroke color"
+        },
+        "stroke_width": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line thickness",
+          "title": "Stroke Width"
+        },
+        "style": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line style e.g. 'solid', 'dashed', 'dotted'",
+          "title": "Style"
+        }
+      },
+      "required": [
+        "id",
+        "points"
+      ],
+      "title": "LinePrimitive",
+      "type": "object"
+    },
+    "Page": {
+      "description": "Single page container holding an ordered sequence of document elements.",
+      "properties": {
+        "page_number": {
+          "description": "1-indexed page number within document",
+          "minimum": 1,
+          "title": "Page Number",
+          "type": "integer"
+        },
+        "width": {
+          "description": "Page canvas width",
+          "exclusiveMinimum": 0.0,
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "description": "Page canvas height",
+          "exclusiveMinimum": 0.0,
+          "title": "Height",
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/CoordinateUnit",
+          "default": "px",
+          "description": "Coordinate measurement unit for page dimensions and children"
+        },
+        "source_media": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceMedia"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Metadata describing source image or PDF page"
+        },
+        "elements": {
+          "description": "Ordered array of page elements (reading/layout order)",
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "diagram": "#/$defs/DiagramElement",
+                "equation": "#/$defs/EquationElement",
+                "image": "#/$defs/ImageElement",
+                "table": "#/$defs/TableElement",
+                "text": "#/$defs/TextElement"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/TextElement"
+              },
+              {
+                "$ref": "#/$defs/DiagramElement"
+              },
+              {
+                "$ref": "#/$defs/ImageElement"
+              },
+              {
+                "$ref": "#/$defs/TableElement"
+              },
+              {
+                "$ref": "#/$defs/EquationElement"
+              }
+            ]
+          },
+          "title": "Elements",
+          "type": "array"
+        }
+      },
+      "required": [
+        "page_number",
+        "width",
+        "height"
+      ],
+      "title": "Page",
+      "type": "object"
+    },
+    "Point": {
+      "description": "2D Point representation (x, y).",
+      "properties": {
+        "x": {
+          "description": "X coordinate relative to page origin (top-left)",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Y coordinate relative to page origin (top-left)",
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Point",
+      "type": "object"
+    },
+    "SourceMedia": {
+      "description": "Origin information for the source document page.",
+      "properties": {
+        "file_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Original filename or path",
+          "title": "File Path"
+        },
+        "media_type": {
+          "description": "Media type, e.g., 'image/png', 'image/jpeg', 'application/pdf'",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "original_page_number": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "1-indexed page number if derived from multi-page document",
+          "title": "Original Page Number"
+        },
+        "dpi": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "DPI/Resolution of input media",
+          "title": "Dpi"
+        }
+      },
+      "required": [
+        "media_type"
+      ],
+      "title": "SourceMedia",
+      "type": "object"
+    },
+    "StructuredDiagramData": {
+      "description": "Payload for structured diagrams reconstructible via shapes and connections.",
+      "properties": {
+        "primitives": {
+          "description": "Ordered list of visual geometric primitives",
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "arrow": "#/$defs/ArrowPrimitive",
+                "box": "#/$defs/BoxPrimitive",
+                "circle": "#/$defs/CirclePrimitive",
+                "connection": "#/$defs/ConnectionPrimitive",
+                "label": "#/$defs/LabelPrimitive",
+                "line": "#/$defs/LinePrimitive"
+              },
+              "propertyName": "primitive_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/BoxPrimitive"
+              },
+              {
+                "$ref": "#/$defs/CirclePrimitive"
+              },
+              {
+                "$ref": "#/$defs/LinePrimitive"
+              },
+              {
+                "$ref": "#/$defs/ArrowPrimitive"
+              },
+              {
+                "$ref": "#/$defs/LabelPrimitive"
+              },
+              {
+                "$ref": "#/$defs/ConnectionPrimitive"
+              }
+            ]
+          },
+          "title": "Primitives",
+          "type": "array"
+        }
+      },
+      "title": "StructuredDiagramData",
+      "type": "object"
+    },
+    "TableElement": {
+      "description": "Future element type for extracted structured tables.",
+      "properties": {
+        "id": {
+          "description": "Unique element identifier",
+          "title": "Id",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Exact bounding box position on page"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extraction confidence score",
+          "title": "Confidence"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "description": "Extensible key-value metadata for non-canonical attributes",
+          "title": "Metadata",
+          "type": "object"
+        },
+        "type": {
+          "const": "table",
+          "default": "table",
+          "description": "Element type discriminator",
+          "title": "Type",
+          "type": "string"
+        },
+        "headers": {
+          "description": "Table column header titles",
+          "items": {
+            "type": "string"
+          },
+          "title": "Headers",
+          "type": "array"
+        },
+        "rows": {
+          "description": "2D grid matrix of table cells",
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Rows",
+          "type": "array"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Table caption",
+          "title": "Caption"
+        }
+      },
+      "required": [
+        "id",
+        "position"
+      ],
+      "title": "TableElement",
+      "type": "object"
+    },
+    "TextElement": {
+      "description": "Canonical representation of a text block in a document.\n\nSupports headings, paragraphs, bullet points, and numbered list items with exact\npositioning and OCR confidence metrics.",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for the text element",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "text",
+          "default": "text",
+          "description": "Element type discriminator",
+          "title": "Type",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/TextKind",
+          "description": "Semantic text kind: heading, paragraph, bullet, numbered_list"
+        },
+        "content": {
+          "description": "Extracted plain text or markdown content",
+          "title": "Content",
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/BoundingBox",
+          "description": "Exact bounding box and coordinates"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "OCR/AI extraction confidence score (0.0 - 1.0)",
+          "title": "Confidence"
+        },
+        "heading_level": {
+          "anyOf": [
+            {
+              "maximum": 6,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading depth level (1-6) when kind is 'heading'",
+          "title": "Heading Level"
+        },
+        "list_level": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nesting indent level (1-based) for bullet or numbered list items",
+          "title": "List Level"
+        },
+        "list_index": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Item index number (1-based) when kind is 'numbered_list'",
+          "title": "List Index"
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextStyle"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Styling attributes"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "content",
+        "position"
+      ],
+      "title": "TextElement",
+      "type": "object"
+    },
+    "TextKind": {
+      "description": "Supported text element categories.",
+      "enum": [
+        "heading",
+        "paragraph",
+        "bullet",
+        "numbered_list"
+      ],
+      "title": "TextKind",
+      "type": "string"
+    },
+    "TextStyle": {
+      "description": "Formatting style metadata for text blocks.",
+      "properties": {
+        "font_family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Font family name",
+          "title": "Font Family"
+        },
+        "font_size": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Font size in points or pixels",
+          "title": "Font Size"
+        },
+        "font_weight": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Font weight e.g. 'bold', 'normal', '700'",
+          "title": "Font Weight"
+        },
+        "italic": {
+          "default": false,
+          "description": "Whether text is italicized",
+          "title": "Italic",
+          "type": "boolean"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Color"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Text color"
+        }
+      },
+      "title": "TextStyle",
+      "type": "object"
+    }
+  },
+  "description": "Root canonical Mulberry document model.",
+  "properties": {
+    "version": {
+      "default": "1.0",
+      "description": "Canonical document schema specification version",
+      "title": "Version",
+      "type": "string"
+    },
+    "id": {
+      "description": "Unique document ID (e.g. UUID)",
+      "title": "Id",
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/DocumentMetadata",
+      "description": "Document level metadata"
+    },
+    "pages": {
+      "description": "Ordered list of pages comprising document",
+      "items": {
+        "$ref": "#/$defs/Page"
+      },
+      "title": "Pages",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "Document",
+  "type": "object"
+}

@@ -1,0 +1,391 @@
+{
+  "version": "1.0",
+  "id": "doc_sample_2026_001",
+  "metadata": {
+    "title": "System Architecture & Flow Notes",
+    "author": "Jaison",
+    "created_at": "2026-09-23T17:06:12.380085",
+    "updated_at": "2026-09-23T17:06:12.380087",
+    "source_file": "architecture_notes_page1.pdf",
+    "generator_version": "0.1.0",
+    "extra_metadata": {
+      "ocr_engine": "mulberry-ocr-v1",
+      "language": "en"
+    }
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 1200.0,
+      "height": 1600.0,
+      "unit": "px",
+      "source_media": {
+        "file_path": "architecture_notes_page1.pdf",
+        "media_type": "application/pdf",
+        "original_page_number": 1,
+        "dpi": 300
+      },
+      "elements": [
+        {
+          "id": "elem_head_1",
+          "type": "text",
+          "kind": "heading",
+          "content": "Mulberry Processing Pipeline",
+          "position": {
+            "x": 100.0,
+            "y": 80.0,
+            "width": 800.0,
+            "height": 50.0,
+            "unit": "px"
+          },
+          "confidence": 0.98,
+          "heading_level": 1,
+          "list_level": null,
+          "list_index": null,
+          "style": {
+            "font_family": "Inter",
+            "font_size": 28.0,
+            "font_weight": "bold",
+            "italic": false,
+            "color": {
+              "hex": "#1E293B",
+              "alpha": 1.0
+            }
+          }
+        },
+        {
+          "id": "elem_para_1",
+          "type": "text",
+          "kind": "paragraph",
+          "content": "Mulberry ingests handwritten document scans and converts them into structured digital notes. Below is the active pipeline flow:",
+          "position": {
+            "x": 100.0,
+            "y": 140.0,
+            "width": 1000.0,
+            "height": 40.0,
+            "unit": "px"
+          },
+          "confidence": 0.95,
+          "heading_level": null,
+          "list_level": null,
+          "list_index": null,
+          "style": {
+            "font_family": "Inter",
+            "font_size": 16.0,
+            "font_weight": null,
+            "italic": false,
+            "color": {
+              "hex": "#334155",
+              "alpha": 1.0
+            }
+          }
+        },
+        {
+          "id": "elem_bullet_1",
+          "type": "text",
+          "kind": "bullet",
+          "content": "Page Splitter & Preprocessing",
+          "position": {
+            "x": 120.0,
+            "y": 190.0,
+            "width": 600.0,
+            "height": 25.0,
+            "unit": "px"
+          },
+          "confidence": 0.96,
+          "heading_level": null,
+          "list_level": 1,
+          "list_index": null,
+          "style": null
+        },
+        {
+          "id": "elem_bullet_2",
+          "type": "text",
+          "kind": "bullet",
+          "content": "Text OCR & Region Detection",
+          "position": {
+            "x": 120.0,
+            "y": 220.0,
+            "width": 600.0,
+            "height": 25.0,
+            "unit": "px"
+          },
+          "confidence": 0.94,
+          "heading_level": null,
+          "list_level": 1,
+          "list_index": null,
+          "style": null
+        },
+        {
+          "id": "elem_bullet_3",
+          "type": "text",
+          "kind": "bullet",
+          "content": "Diagram Detection & Vectorization",
+          "position": {
+            "x": 120.0,
+            "y": 250.0,
+            "width": 600.0,
+            "height": 25.0,
+            "unit": "px"
+          },
+          "confidence": 0.93,
+          "heading_level": null,
+          "list_level": 1,
+          "list_index": null,
+          "style": null
+        },
+        {
+          "id": "elem_diag_struct_1",
+          "type": "diagram",
+          "category": "structured",
+          "position": {
+            "x": 100.0,
+            "y": 300.0,
+            "width": 1000.0,
+            "height": 450.0,
+            "unit": "px"
+          },
+          "confidence": 0.92,
+          "structured_data": {
+            "primitives": [
+              {
+                "id": "box_input",
+                "confidence": 0.97,
+                "primitive_type": "box",
+                "position": {
+                  "x": 120.0,
+                  "y": 330.0,
+                  "width": 180.0,
+                  "height": 80.0,
+                  "unit": "px"
+                },
+                "label": "Input PDF / Image",
+                "fill_color": {
+                  "hex": "#DBEAFE",
+                  "alpha": 1.0
+                },
+                "stroke_color": {
+                  "hex": "#2563EB",
+                  "alpha": 1.0
+                },
+                "stroke_width": 2.0,
+                "corner_radius": 8.0
+              },
+              {
+                "id": "box_ocr",
+                "confidence": 0.95,
+                "primitive_type": "box",
+                "position": {
+                  "x": 410.0,
+                  "y": 330.0,
+                  "width": 180.0,
+                  "height": 80.0,
+                  "unit": "px"
+                },
+                "label": "Layout Analysis & OCR",
+                "fill_color": {
+                  "hex": "#E0E7FF",
+                  "alpha": 1.0
+                },
+                "stroke_color": {
+                  "hex": "#4F46E5",
+                  "alpha": 1.0
+                },
+                "stroke_width": 2.0,
+                "corner_radius": 8.0
+              },
+              {
+                "id": "circle_canonical",
+                "confidence": 0.91,
+                "primitive_type": "circle",
+                "position": {
+                  "x": 710.0,
+                  "y": 330.0,
+                  "width": 100.0,
+                  "height": 80.0,
+                  "unit": "px"
+                },
+                "label": "Canonical Model",
+                "fill_color": {
+                  "hex": "#DCFCE7",
+                  "alpha": 1.0
+                },
+                "stroke_color": {
+                  "hex": "#16A34A",
+                  "alpha": 1.0
+                },
+                "stroke_width": 2.0
+              },
+              {
+                "id": "arrow_1",
+                "confidence": 0.94,
+                "primitive_type": "arrow",
+                "start_point": {
+                  "x": 300.0,
+                  "y": 370.0
+                },
+                "end_point": {
+                  "x": 410.0,
+                  "y": 370.0
+                },
+                "has_head_at_start": false,
+                "has_head_at_end": true,
+                "label": "Extracts",
+                "stroke_color": {
+                  "hex": "#64748B",
+                  "alpha": 1.0
+                },
+                "stroke_width": 2.0
+              },
+              {
+                "id": "arrow_2",
+                "confidence": 0.93,
+                "primitive_type": "arrow",
+                "start_point": {
+                  "x": 590.0,
+                  "y": 370.0
+                },
+                "end_point": {
+                  "x": 710.0,
+                  "y": 370.0
+                },
+                "has_head_at_start": false,
+                "has_head_at_end": true,
+                "label": "Serializes",
+                "stroke_color": {
+                  "hex": "#64748B",
+                  "alpha": 1.0
+                },
+                "stroke_width": 2.0
+              },
+              {
+                "id": "lbl_diag_caption",
+                "confidence": 0.96,
+                "primitive_type": "label",
+                "text": "Figure 1: Automated Document Processing Flow",
+                "position": {
+                  "x": 120.0,
+                  "y": 710.0,
+                  "width": 600.0,
+                  "height": 30.0,
+                  "unit": "px"
+                },
+                "font_size": 14.0,
+                "color": {
+                  "hex": "#475569",
+                  "alpha": 1.0
+                }
+              },
+              {
+                "id": "conn_1",
+                "confidence": null,
+                "primitive_type": "connection",
+                "source_node_id": "box_input",
+                "target_node_id": "box_ocr",
+                "connection_type": "arrow",
+                "label": "Raw Media",
+                "directional": true
+              },
+              {
+                "id": "conn_2",
+                "confidence": null,
+                "primitive_type": "connection",
+                "source_node_id": "box_ocr",
+                "target_node_id": "circle_canonical",
+                "connection_type": "arrow",
+                "label": "JSON Data",
+                "directional": true
+              }
+            ]
+          },
+          "illustrated_data": null
+        },
+        {
+          "id": "elem_head_2",
+          "type": "text",
+          "kind": "heading",
+          "content": "Handwritten Concept Sketch",
+          "position": {
+            "x": 100.0,
+            "y": 780.0,
+            "width": 600.0,
+            "height": 35.0,
+            "unit": "px"
+          },
+          "confidence": 0.97,
+          "heading_level": 2,
+          "list_level": null,
+          "list_index": null,
+          "style": {
+            "font_family": "Inter",
+            "font_size": 22.0,
+            "font_weight": "bold",
+            "italic": false,
+            "color": {
+              "hex": "#1E293B",
+              "alpha": 1.0
+            }
+          }
+        },
+        {
+          "id": "elem_diag_illust_1",
+          "type": "diagram",
+          "category": "illustrated",
+          "position": {
+            "x": 100.0,
+            "y": 830.0,
+            "width": 900.0,
+            "height": 500.0,
+            "unit": "px"
+          },
+          "confidence": 0.89,
+          "structured_data": null,
+          "illustrated_data": {
+            "image_ref": "assets/crops/sketch_crop_001.png",
+            "mime_type": "image/png",
+            "width": 900.0,
+            "height": 500.0,
+            "caption": "Hand-drawn schematic of Mulberry UI mockup.",
+            "alt_text": "A complex handwritten draft illustrating the dual pane editor and sidebar layout."
+          }
+        },
+        {
+          "id": "elem_num_1",
+          "type": "text",
+          "kind": "numbered_list",
+          "content": "Validate canonical JSON structure against schema.",
+          "position": {
+            "x": 100.0,
+            "y": 1360.0,
+            "width": 800.0,
+            "height": 25.0,
+            "unit": "px"
+          },
+          "confidence": 0.99,
+          "heading_level": null,
+          "list_level": 1,
+          "list_index": 1,
+          "style": null
+        },
+        {
+          "id": "elem_num_2",
+          "type": "text",
+          "kind": "numbered_list",
+          "content": "Render visual nodes in React canvas editor.",
+          "position": {
+            "x": 100.0,
+            "y": 1390.0,
+            "width": 800.0,
+            "height": 25.0,
+            "unit": "px"
+          },
+          "confidence": 0.98,
+          "heading_level": null,
+          "list_level": 1,
+          "list_index": 2,
+          "style": null
+        }
+      ]
+    }
+  ]
+}
