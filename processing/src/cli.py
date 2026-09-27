@@ -19,8 +19,18 @@ from processing.canonical.element import TextElement, DiagramElement
 from processing.canonical.text import TextKind
 from processing.canonical.diagram import DiagramCategory
 from processing.canonical.common import BoundingBox, CoordinateUnit
-from processing.ocr import OCRService, OCRConfig, DeviceType, OCRRuntime, TextRegion
+from processing.ocr import (
+    OCRService,
+    OCRConfig,
+    DeviceType,
+    OCRRuntime,
+    TextRegion,
+    RecognizerBackend,
+    ImagePreprocessingConfig,
+    normalize_image,
+)
 from processing.diagram import get_detector, draw_diagram_boxes
+from processing.converter import ImageConverter, convert_dng_to_png
 
 
 def export_artifacts(base_dir: Path) -> None:
@@ -83,10 +93,7 @@ def annotate_image(
     diagram_detections: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
     """Draw OCR and/or Diagram bounding boxes onto the image and save output."""
-    img = cv2.imread(str(image_path))
-    if img is None:
-        pil_img = Image.open(image_path).convert("RGB")
-        img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    img, _, _ = normalize_image(image_path)
 
     # 1. Draw Text Regions (OCR) in Blue (BGR: 255, 128, 0)
     if text_regions:
@@ -125,11 +132,31 @@ def run_ocr_command(args: argparse.Namespace) -> None:
 
     device = DeviceType(args.device.lower()) if args.device else DeviceType.AUTO
     runtime = OCRRuntime(args.runtime.lower()) if args.runtime else OCRRuntime.AUTO
+    rec_val = args.recognizer.lower() if getattr(args, "recognizer", None) else "trocr"
+    rec_backend = RecognizerBackend(rec_val) if rec_val in [r.value for r in RecognizerBackend] else RecognizerBackend.TROCR
 
-    config = OCRConfig(device=device, runtime=runtime, drop_score=args.drop_score)
+    prep_config = ImagePreprocessingConfig(
+        enable_tiling=getattr(args, "tiling", False),
+        tile_size=getattr(args, "tile_size", 1024),
+        tile_overlap=getattr(args, "tile_overlap", 128),
+        enable_denoise=getattr(args, "denoise", False),
+        enable_contrast_norm=getattr(args, "contrast_norm", False),
+        enable_deskew=getattr(args, "deskew", False),
+    )
+
+    config = OCRConfig(
+        device=device,
+        runtime=runtime,
+        recognizer_backend=rec_backend,
+        drop_score=args.drop_score,
+        preprocessing=prep_config,
+    )
     service = OCRService(config)
 
-    print(f"🔍 Running OCR on '{image_path.name}' [Device: {service.device.value}, Runtime: {service.runtime.value}]...")
+    print(
+        f"🔍 Running OCR on '{image_path.name}' [Device: {service.device.value}, "
+        f"Recognizer: {config.recognizer_backend.value}, Tiling: {prep_config.enable_tiling}]..."
+    )
     results = service.process(image_path)
 
     # Format output JSON
@@ -288,6 +315,24 @@ def run_pipeline_command(args: argparse.Namespace) -> None:
     print(f"✅ Combined Annotated image saved to: {annotated_path}")
 
 
+def run_convert_command(args: argparse.Namespace) -> None:
+    input_path = Path(args.image).resolve()
+    if not input_path.exists():
+        print(f"❌ Error: Input image file not found at '{input_path}'", file=sys.stderr)
+        sys.exit(1)
+
+    target_format = args.format.lower()
+    out_path = Path(args.output) if args.output else input_path.with_suffix(f".{target_format}")
+
+    print(f"🖼️ Converting '{input_path.name}' to {target_format.upper()} format...")
+    try:
+        res = ImageConverter.convert(input_path, output_path=out_path, target_format=target_format)
+        print(f"✅ Image successfully converted and saved to: '{res}'")
+    except Exception as e:
+        print(f"❌ Conversion failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Mulberry Processing Tooling CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
@@ -312,7 +357,14 @@ def main() -> None:
     ocr_parser.add_argument("-j", "--output-json", type=Path, help="Path to save output JSON")
     ocr_parser.add_argument("--device", choices=["auto", "cpu", "gpu"], default="auto", help="Execution device")
     ocr_parser.add_argument("--runtime", choices=["auto", "paddle", "onnx", "openvino"], default="auto", help="OCR inference runtime")
+    ocr_parser.add_argument("--recognizer", choices=["trocr", "paddle"], default="trocr", help="Text recognizer backend (trocr for handwriting, paddle for printed)")
     ocr_parser.add_argument("--drop-score", type=float, default=0.5, help="Confidence threshold drop score")
+    ocr_parser.add_argument("--tiling", action="store_true", help="Enable patch-based tiling for high-resolution images")
+    ocr_parser.add_argument("--tile-size", type=int, default=1024, help="Tile size in pixels (default: 1024)")
+    ocr_parser.add_argument("--tile-overlap", type=int, default=128, help="Tile overlap in pixels (default: 128)")
+    ocr_parser.add_argument("--denoise", action="store_true", help="Enable handwriting denoising filter")
+    ocr_parser.add_argument("--contrast-norm", action="store_true", help="Enable CLAHE contrast normalization")
+    ocr_parser.add_argument("--deskew", action="store_true", help="Enable image deskewing rotation")
 
     # 4. diagram
     diag_parser = subparsers.add_parser("diagram", help="Test Diagram Detector model on an image and generate annotated image + JSON")
@@ -329,6 +381,12 @@ def main() -> None:
     pipe_parser.add_argument("-j", "--output-json", type=Path, help="Path to save canonical Document JSON")
     pipe_parser.add_argument("--device", choices=["auto", "cpu", "gpu", "cuda"], default="auto", help="Execution device")
     pipe_parser.add_argument("--conf", type=float, default=0.25, help="Diagram confidence threshold")
+
+    # 6. convert
+    conv_parser = subparsers.add_parser("convert", help="Convert image format (e.g., DNG to PNG)")
+    conv_parser.add_argument("image", type=Path, help="Path to input image file (e.g. .dng, .jpg, .tiff)")
+    conv_parser.add_argument("-o", "--output", type=Path, help="Path to save output image file")
+    conv_parser.add_argument("-f", "--format", default="png", help="Target output format (default: png)")
 
     args = parser.parse_args()
 
@@ -350,6 +408,8 @@ def main() -> None:
         run_diagram_command(args)
     elif args.command == "pipeline":
         run_pipeline_command(args)
+    elif args.command == "convert":
+        run_convert_command(args)
     else:
         parser.print_help()
 
