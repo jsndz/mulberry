@@ -333,6 +333,84 @@ def run_convert_command(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def run_vlm_command(args: argparse.Namespace) -> None:
+    image_path = Path(args.image).resolve()
+    if not image_path.exists():
+        print(f"❌ Error: Image file not found at '{image_path}'", file=sys.stderr)
+        sys.exit(1)
+
+    from processing.vlm import VLMConfig, VLMService
+
+    device = args.device if args.device != "auto" else None
+    config = VLMConfig(device=device)
+    service = VLMService(config=config)
+
+    print(f"🧠 Running VLM Handwritten Extraction on '{image_path.name}'...")
+    try:
+        doc = service.process(image_path)
+        json_str = doc.model_dump_json(indent=2)
+        print("\n--- Canonical Document JSON OUTPUT ---")
+        print(json_str)
+
+        if args.output_json:
+            out_json_path = Path(args.output_json).resolve()
+            out_json_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(out_json_path, "w", encoding="utf-8") as f:
+                f.write(json_str)
+            print(f"\n✅ Canonical Document JSON saved to: {out_json_path}")
+    except Exception as e:
+        print(f"❌ VLM Processing failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def run_extract_command(args: argparse.Namespace) -> None:
+    image_path = Path(args.image).resolve()
+    if not image_path.exists():
+        print(f"❌ Error: Image file not found at '{image_path}'", file=sys.stderr)
+        sys.exit(1)
+
+    from processing.extract import ExtractionConfig, HandwritingExtractionPipeline, HardwareTier
+    from processing.extract.assembly import export_to_canonical, export_to_json
+
+    device = args.device if args.device != "auto" else None
+    tier_map = {
+        "tier_1_max_accuracy": HardwareTier.TIER_1_MAX_ACCURACY,
+        "tier_2_balanced": HardwareTier.TIER_2_BALANCED,
+        "tier_3_edge_cpu": HardwareTier.TIER_3_EDGE_CPU,
+    }
+    tier = tier_map.get(args.tier, HardwareTier.TIER_1_MAX_ACCURACY)
+
+    config = ExtractionConfig(
+        tier=tier,
+        device=device,
+        enable_dewarp=not args.no_dewarp,
+        enable_clahe=not args.no_clahe,
+        context_db_path=str(args.db) if args.db else None,
+    )
+    pipeline = HandwritingExtractionPipeline(config=config)
+
+    print(f"🚀 Running HCD-HTR Extraction ({tier.value}) on '{image_path.name}'...")
+    try:
+        doc = pipeline.process_document(image_path)
+        json_str = doc.model_dump_json(indent=2)
+        print("\n--- HCD-HTR Production JSON Schema Output ---")
+        print(json_str)
+
+        if args.output:
+            out_path = Path(args.output).resolve()
+            export_to_json(doc, out_path)
+            print(f"\n✅ Extraction JSON saved to: {out_path}")
+
+        if args.canonical:
+            canon_path = Path(args.canonical).resolve()
+            export_to_canonical(doc, canon_path)
+            print(f"\n✅ Mulberry Canonical Document saved to: {canon_path}")
+
+    except Exception as e:
+        print(f"❌ HCD-HTR Extraction failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Mulberry Processing Tooling CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
@@ -388,6 +466,31 @@ def main() -> None:
     conv_parser.add_argument("-o", "--output", type=Path, help="Path to save output image file")
     conv_parser.add_argument("-f", "--format", default="png", help="Target output format (default: png)")
 
+    # 7. vlm
+    vlm_parser = subparsers.add_parser("vlm", help="Run VLM model on handwritten image and generate canonical Document JSON")
+    vlm_parser.add_argument("image", type=Path, help="Path to input handwritten image file")
+    vlm_parser.add_argument("-j", "--output-json", type=Path, help="Path to save canonical Document JSON")
+    vlm_parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto", help="Execution device")
+
+    # 8. extract (HCD-HTR)
+    extract_parser = subparsers.add_parser(
+        "extract",
+        help="Run Hierarchical Context-Driven Handwriting Extraction (HCD-HTR) pipeline"
+    )
+    extract_parser.add_argument("image", type=Path, help="Path to input handwriting note image")
+    extract_parser.add_argument("-o", "--output", type=Path, help="Path to save HCD-HTR production JSON")
+    extract_parser.add_argument("-c", "--canonical", type=Path, help="Path to save Mulberry Canonical Document JSON")
+    extract_parser.add_argument(
+        "--tier",
+        choices=["tier_1_max_accuracy", "tier_2_balanced", "tier_3_edge_cpu"],
+        default="tier_1_max_accuracy",
+        help="Hardware execution tier (default: tier_1_max_accuracy)"
+    )
+    extract_parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto", help="Execution device")
+    extract_parser.add_argument("--db", type=Path, help="Custom SQLite context database path")
+    extract_parser.add_argument("--no-dewarp", action="store_true", help="Disable 4-point perspective dewarping")
+    extract_parser.add_argument("--no-clahe", action="store_true", help="Disable CLAHE illumination flattening")
+
     args = parser.parse_args()
 
     if args.command == "export":
@@ -410,6 +513,10 @@ def main() -> None:
         run_pipeline_command(args)
     elif args.command == "convert":
         run_convert_command(args)
+    elif args.command == "vlm":
+        run_vlm_command(args)
+    elif args.command == "extract":
+        run_extract_command(args)
     else:
         parser.print_help()
 

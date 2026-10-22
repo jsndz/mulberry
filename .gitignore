@@ -22,7 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-docs
+
 
 *.png
 
@@ -33,3 +33,13 @@ docs
 yolov8n.pt
 
 test_data
+*.egg-info
+__pycache__
+
+
+
+
+
+.agents
+
+tasks
