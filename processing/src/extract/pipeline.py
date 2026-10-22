@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from processing.canonical.common import CoordinateUnit, SourceMedia
+from processing.canonical.document import Document, DocumentMetadata, Page
 from processing.extract.assembly.aligner import StructuralAligner
 from processing.extract.config import ExtractionConfig, HardwareTier
 from processing.extract.context.db import ContextDatabase
@@ -23,6 +25,7 @@ from processing.extract.recognition.cropper import crop_line_strip
 from processing.extract.recognition.trocr_recognizer import TrOCRRecognizer
 from processing.extract.recognition.vlm_recognizer import QwenVLRecognizer
 from processing.extract.schemas import ExtractionDocument
+from processing.input import DocumentInputSplitter, PageInput
 from processing.ocr.preprocessing import normalize_image
 
 logger = logging.getLogger("mulberry.extract.pipeline")
@@ -171,3 +174,71 @@ class HandwritingExtractionPipeline:
         )
 
         return extraction_doc
+
+    def process_multipage(
+        self,
+        input_source: Union[str, Path, bytes, Image.Image, np.ndarray, List[Any]],
+        manual_glossary: Optional[List[str]] = None,
+        author_id: Optional[str] = None,
+        document_id: Optional[str] = None,
+        dpi: int = 300,
+        progress_callback: Optional[Any] = None,
+    ) -> Document:
+        """
+        Process any input (single image, RAW/DNG, multi-page PDF, or list of files)
+        and assemble the extracted results into a unified multi-page canonical Document.
+        """
+        from uuid import uuid4
+
+        splitter = DocumentInputSplitter()
+        pages: List[Page] = []
+        doc_id = document_id or f"doc_{uuid4().hex[:8]}"
+        overall_topic: Optional[str] = None
+
+        pages_stream = list(splitter.split(input_source, dpi=dpi))
+        total_pages = len(pages_stream)
+
+        for page_input in pages_stream:
+            # Run extraction on individual page canvas
+            extraction = self.process_document(
+                image_input=page_input.image_bgr,
+                manual_glossary=manual_glossary,
+                author_id=author_id,
+                document_id=f"{doc_id}_p{page_input.page_number}",
+            )
+
+            if overall_topic is None and extraction.metadata.detected_topic:
+                overall_topic = extraction.metadata.detected_topic
+
+            canonical_single = extraction.to_canonical_document()
+            page = canonical_single.pages[0]
+            page.page_number = page_input.page_number
+            page.source_media = SourceMedia(
+                file_path=page_input.source_file,
+                media_type=page_input.media_type,
+                original_page_number=page_input.metadata.get("original_page_number", page_input.page_number),
+                dpi=page_input.dpi,
+            )
+            pages.append(page)
+
+            if progress_callback is not None:
+                try:
+                    progress_callback(page_input.page_number, total_pages)
+                except Exception as e:
+                    logger.warning(f"Error executing progress callback: {e}")
+
+        source_file_str = str(input_source) if isinstance(input_source, (str, Path)) else None
+
+        return Document(
+            id=doc_id,
+            metadata=DocumentMetadata(
+                title=overall_topic,
+                source_file=source_file_str,
+                generator_version="HCD-HTR-1.0",
+                extra_metadata={
+                    "total_pages": total_pages,
+                    "tier": str(self.config.tier),
+                },
+            ),
+            pages=pages,
+        )

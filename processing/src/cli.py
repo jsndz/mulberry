@@ -53,6 +53,34 @@ def export_artifacts(base_dir: Path) -> None:
     print(f"✅ Generated Realistic Example Document: {example_path}")
 
 
+def run_export_document(args: argparse.Namespace) -> None:
+    """Export canonical document JSON to Markdown or PDF format."""
+    from processing.exporters import export_document
+
+    input_path = Path(args.file).resolve()
+    if not input_path.exists():
+        print(f"❌ Error: Canonical document file not found at '{input_path}'", file=sys.stderr)
+        sys.exit(1)
+
+    with open(input_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    doc = Document.model_validate(data)
+
+    fmt = args.format.lower()
+    out_path = args.output
+    if not out_path and fmt == "pdf":
+        out_path = input_path.with_suffix(".pdf")
+
+    res = export_document(doc, format=fmt, output_path=out_path)
+
+    if out_path:
+        print(f"✅ Successfully exported document to {fmt.upper()}: '{out_path}'")
+    else:
+        print("\n--- EXPORTED MARKDOWN ---")
+        print(res)
+
+
+
 def draw_label(
     img: np.ndarray,
     text: str,
@@ -391,20 +419,48 @@ def run_extract_command(args: argparse.Namespace) -> None:
 
     print(f"🚀 Running HCD-HTR Extraction ({tier.value}) on '{image_path.name}'...")
     try:
-        doc = pipeline.process_document(image_path)
-        json_str = doc.model_dump_json(indent=2)
-        print("\n--- HCD-HTR Production JSON Schema Output ---")
-        print(json_str)
+        is_pdf = image_path.suffix.lower() == ".pdf"
+        if is_pdf:
+            print("  📄 Detected multi-page PDF document. Splitting and processing pages...")
+            canonical_doc = pipeline.process_multipage(
+                image_path,
+                dpi=getattr(args, "dpi", 300),
+                progress_callback=lambda cur, tot: print(f"  • Completed page {cur} of {tot}"),
+            )
+            json_str = canonical_doc.model_dump_json(indent=2)
+            print("\n--- Canonical Multi-Page Document Output ---")
+            print(json_str)
 
-        if args.output:
-            out_path = Path(args.output).resolve()
-            export_to_json(doc, out_path)
-            print(f"\n✅ Extraction JSON saved to: {out_path}")
+            if args.canonical or args.output:
+                out_path = Path(args.canonical or args.output).resolve()
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(out_path, "w", encoding="utf-8") as f:
+                    f.write(json_str)
+                print(f"\n✅ Multi-page Canonical Document saved to: {out_path}")
+        else:
+            doc = pipeline.process_document(image_path)
+            json_str = doc.model_dump_json(indent=2)
+            print("\n--- HCD-HTR Production JSON Schema Output ---")
+            print(json_str)
 
-        if args.canonical:
-            canon_path = Path(args.canonical).resolve()
-            export_to_canonical(doc, canon_path)
-            print(f"\n✅ Mulberry Canonical Document saved to: {canon_path}")
+            if args.output:
+                out_path = Path(args.output).resolve()
+                export_to_json(doc, out_path)
+                print(f"\n✅ Extraction JSON saved to: {out_path}")
+
+            if args.canonical:
+                canon_path = Path(args.canonical).resolve()
+                export_to_canonical(doc, canon_path)
+                print(f"\n✅ Mulberry Canonical Document saved to: {canon_path}")
+
+        if getattr(args, "export", None):
+            from processing.exporters import export_document
+            export_doc = canonical_doc if is_pdf else doc.to_canonical_document()
+            fmt = args.export.lower()
+            ext = ".md" if fmt in ("markdown", "md") else ".pdf"
+            out_export_path = args.export_out or image_path.with_suffix(ext)
+            export_document(export_doc, format=fmt, output_path=out_export_path)
+            print(f"\n✅ Exported document to {fmt.upper()}: {out_export_path}")
 
     except Exception as e:
         print(f"❌ HCD-HTR Extraction failed: {e}", file=sys.stderr)
@@ -416,12 +472,33 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     # 1. export
-    export_parser = subparsers.add_parser("export", help="Export JSON schema and example JSON")
+    export_parser = subparsers.add_parser("export", help="Export canonical document or JSON schema")
+    export_parser.add_argument(
+        "file",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="Path to Canonical Document JSON to export (optional, exports schema if omitted)",
+    )
+    export_parser.add_argument(
+        "-f",
+        "--format",
+        choices=["markdown", "md", "pdf"],
+        default="markdown",
+        help="Export format (default: markdown)",
+    )
+    export_parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=None,
+        help="Output file path (default: stdout for markdown, <stem>.pdf for pdf)",
+    )
     export_parser.add_argument(
         "--root",
         type=Path,
         default=Path(__file__).resolve().parents[3],
-        help="Root workspace directory",
+        help="Root workspace directory for schema artifact generation",
     )
 
     # 2. validate
@@ -488,14 +565,30 @@ def main() -> None:
     )
     extract_parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto", help="Execution device")
     extract_parser.add_argument("--db", type=Path, help="Custom SQLite context database path")
+    extract_parser.add_argument("--dpi", type=int, default=300, help="Rasterization DPI for PDF pages (default: 300)")
     extract_parser.add_argument("--no-dewarp", action="store_true", help="Disable 4-point perspective dewarping")
     extract_parser.add_argument("--no-clahe", action="store_true", help="Disable CLAHE illumination flattening")
+    extract_parser.add_argument(
+        "--export",
+        choices=["markdown", "md", "pdf"],
+        default=None,
+        help="Export extracted document directly to Markdown or PDF",
+    )
+    extract_parser.add_argument(
+        "--export-out",
+        type=Path,
+        default=None,
+        help="Custom destination path for exported Markdown or PDF",
+    )
 
     args = parser.parse_args()
 
     if args.command == "export":
-        root_path = getattr(args, "root", Path(__file__).resolve().parents[3])
-        export_artifacts(root_path)
+        if getattr(args, "file", None):
+            run_export_document(args)
+        else:
+            root_path = getattr(args, "root", Path(__file__).resolve().parents[3])
+            export_artifacts(root_path)
     elif args.command == "validate":
         try:
             with open(args.file, "r", encoding="utf-8") as f:
