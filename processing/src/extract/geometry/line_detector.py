@@ -37,44 +37,69 @@ class MorphologyLineDetector(BaseLineDetector):
         h, w = bgr.shape[:2]
         gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
-        # Apply adaptive thresholding to detect strokes
+        # Scale-normalization to handle 4K / smartphone 12MP photos consistently
+        scale = 1200.0 / max(h, w) if max(h, w) > 1200 else 1.0
+        if scale < 1.0:
+            small_w, small_h = int(w * scale), int(h * scale)
+            small_gray = cv2.resize(gray, (small_w, small_h), interpolation=cv2.INTER_AREA)
+        else:
+            small_w, small_h = w, h
+            small_gray = gray
+
+        # Equalize contrast across uneven shadows and paper textures
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        norm = clahe.apply(small_gray)
+
+        # Adaptive thresholding
         thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 15, 8
+            norm, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 12
         )
 
         # Mask out non-text regions (diagrams, etc.)
-        if non_text_mask is not None and non_text_mask.shape[:2] == (h, w):
-            thresh[non_text_mask > 0] = 0
+        if non_text_mask is not None:
+            if non_text_mask.shape[:2] != (small_h, small_w):
+                scaled_mask = cv2.resize(
+                    non_text_mask, (small_w, small_h), interpolation=cv2.INTER_NEAREST
+                )
+            else:
+                scaled_mask = non_text_mask
+            thresh[scaled_mask > 0] = 0
 
         # Dilate horizontally to connect words within lines while keeping vertical lines separate
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 3))
+        kw = max(18, int(small_w * 0.035))
+        kh = max(2, int(small_h * 0.003))
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kw, kh))
         dilated = cv2.dilate(thresh, kernel, iterations=2)
 
-        contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(dilated, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         polygons: List[Polygon] = []
 
         for cnt in contours:
-            # Oriented bounding rectangle
             rect = cv2.minAreaRect(cnt)
             (cx, cy), (rw, rh), angle = rect
 
             box_w = max(rw, rh)
             box_h = min(rw, rh)
 
-            if box_w < self.min_line_width or box_h < self.min_line_height:
+            # Discard outer paper boundary / background page borders
+            if box_w >= small_w * 0.85 and box_h >= small_h * 0.85:
                 continue
 
-            # Extract 4-point polygon
-            box_pts = cv2.boxPoints(rect)
-            # Ensure within canvas
-            clamped_pts = []
-            for pt in box_pts:
-                x = max(0.0, min(float(w), float(pt[0])))
-                y = max(0.0, min(float(h), float(pt[1])))
-                clamped_pts.append((x, y))
+            # Filter out tiny noise artifacts and excessively tall blocks
+            min_w = min(self.min_line_width * scale, max(15.0, small_w * 0.02))
+            min_h = min(self.min_line_height * scale, 3.0)
+            if box_w < min_w or box_h < min_h or box_h > small_h * 0.25:
+                continue
 
-            # Order points
-            poly = Polygon(points=clamped_pts)
+            # Extract 4-point polygon and scale back to original image coordinates
+            box_pts = cv2.boxPoints(rect)
+            scaled_pts = []
+            for pt in box_pts:
+                orig_x = max(0.0, min(float(w), float(pt[0] / scale)))
+                orig_y = max(0.0, min(float(h), float(pt[1] / scale)))
+                scaled_pts.append((orig_x, orig_y))
+
+            poly = Polygon(points=scaled_pts)
             polygons.append(poly)
 
         return polygons
@@ -86,6 +111,8 @@ class SuryaLineDetector(BaseLineDetector):
     """
 
     def __init__(self) -> None:
+        self.fallback_used: bool = False
+        self.fallback_reason: Optional[str] = None
         try:
             from surya.model.detection.segformer import load_model, load_processor
             self.processor = load_processor()
@@ -94,6 +121,8 @@ class SuryaLineDetector(BaseLineDetector):
         except Exception as e:
             logger.warning(f"Surya detection is not available: {e}")
             self._available = False
+            self.fallback_used = True
+            self.fallback_reason = str(e)
 
     def detect_lines(
         self,
@@ -101,6 +130,9 @@ class SuryaLineDetector(BaseLineDetector):
         non_text_mask: Optional[np.ndarray] = None,
     ) -> List[Polygon]:
         if not getattr(self, "_available", False):
+            self.fallback_used = True
+            if not self.fallback_reason:
+                self.fallback_reason = "Surya detector dependencies or weights not available"
             fallback = MorphologyLineDetector()
             return fallback.detect_lines(image, non_text_mask=non_text_mask)
 
@@ -111,21 +143,28 @@ class SuryaLineDetector(BaseLineDetector):
         else:
             pil_img = image.convert("RGB")
 
-        preds = batch_text_detection([pil_img], self.model, self.processor)
-        boxes = preds[0].bboxes
+        try:
+            preds = batch_text_detection([pil_img], self.model, self.processor)
+            boxes = preds[0].bboxes
 
-        polygons: List[Polygon] = []
-        for box in boxes:
-            xmin, ymin, xmax, ymax = float(box[0]), float(box[1]), float(box[2]), float(box[3])
-            # Check if center intersects non_text_mask
-            if non_text_mask is not None:
-                cx, cy = int((xmin + xmax) / 2), int((ymin + ymax) / 2)
-                h, w = non_text_mask.shape[:2]
-                if 0 <= cy < h and 0 <= cx < w and non_text_mask[cy, cx] > 0:
-                    continue
-            polygons.append(Polygon.from_bbox(xmin, ymin, xmax, ymax))
+            polygons: List[Polygon] = []
+            for box in boxes:
+                xmin, ymin, xmax, ymax = float(box[0]), float(box[1]), float(box[2]), float(box[3])
+                # Check if center intersects non_text_mask
+                if non_text_mask is not None:
+                    cx, cy = int((xmin + xmax) / 2), int((ymin + ymax) / 2)
+                    h, w = non_text_mask.shape[:2]
+                    if 0 <= cy < h and 0 <= cx < w and non_text_mask[cy, cx] > 0:
+                        continue
+                polygons.append(Polygon.from_bbox(xmin, ymin, xmax, ymax))
 
-        return polygons
+            return polygons
+        except Exception as e:
+            logger.warning(f"Surya text detection failed: {e}. Falling back to morphology.")
+            self.fallback_used = True
+            self.fallback_reason = str(e)
+            fallback = MorphologyLineDetector()
+            return fallback.detect_lines(image, non_text_mask=non_text_mask)
 
 
 class PaddleDBNetLineDetector(BaseLineDetector):
@@ -134,6 +173,8 @@ class PaddleDBNetLineDetector(BaseLineDetector):
     """
 
     def __init__(self) -> None:
+        self.fallback_used: bool = False
+        self.fallback_reason: Optional[str] = None
         try:
             from processing.ocr.backends.detectors.paddle import PaddleTextDetector
             from processing.ocr.config import DetectionRuntime, DeviceType, OCRConfig
@@ -148,6 +189,8 @@ class PaddleDBNetLineDetector(BaseLineDetector):
         except Exception as e:
             logger.warning(f"PaddleTextDetector is not available: {e}")
             self._available = False
+            self.fallback_used = True
+            self.fallback_reason = str(e)
 
     def detect_lines(
         self,
@@ -155,6 +198,9 @@ class PaddleDBNetLineDetector(BaseLineDetector):
         non_text_mask: Optional[np.ndarray] = None,
     ) -> List[Polygon]:
         if not getattr(self, "_available", False):
+            self.fallback_used = True
+            if not self.fallback_reason:
+                self.fallback_reason = "PaddleTextDetector dependencies or weights not available"
             fallback = MorphologyLineDetector()
             return fallback.detect_lines(image, non_text_mask=non_text_mask)
 
@@ -178,6 +224,8 @@ class PaddleDBNetLineDetector(BaseLineDetector):
             return polygons
         except Exception as e:
             logger.warning(f"PaddleTextDetector line detection failed: {e}. Falling back to morphology.")
+            self.fallback_used = True
+            self.fallback_reason = str(e)
             fallback = MorphologyLineDetector()
             return fallback.detect_lines(image, non_text_mask=non_text_mask)
 

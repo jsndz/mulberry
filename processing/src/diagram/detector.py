@@ -208,7 +208,7 @@ class YOLODiagramDetector(BaseDiagramDetector):
 
 def get_detector(
     force_device: Optional[str] = None,
-    dit_model_name: str = "microsoft/dit-base-finetuned-publaynet",
+    dit_model_name: Optional[str] = None,
     yolo_model_name: str = "yolov8n.pt",
     default_conf_threshold: float = 0.25,
 ) -> BaseDiagramDetector:
@@ -216,24 +216,17 @@ def get_detector(
     Factory function returning a unified diagram detector interface.
 
     Dynamically adapts to the hardware execution environment:
-    - If CUDA-enabled GPU is available: initializes DiTDiagramDetector (Hugging Face DiT PubLayNet).
-    - If CPU-only: gracefully falls back to YOLODiagramDetector (Ultralytics YOLO).
-
-    Args:
-        force_device: Optional override ('cuda' or 'cpu').
-        dit_model_name: Hugging Face repository identifier for DiT weights.
-        yolo_model_name: Ultralytics YOLO model weight file (e.g. 'yolov8n.pt' or 'yolov11n.pt').
-        default_conf_threshold: Default inference confidence threshold.
-
-    Returns:
-        Instance conforming to BaseDiagramDetector interface.
+    - If dit_model_name is provided and CUDA is available: initializes DiTDiagramDetector.
+    - Otherwise: uses YOLODiagramDetector (on CUDA if available, else CPU).
     """
     if force_device:
         use_gpu = force_device.lower() in ("cuda", "gpu")
     else:
         use_gpu = torch.cuda.is_available()
 
-    if use_gpu:
+    device_str = "cuda" if use_gpu else "cpu"
+
+    if dit_model_name and use_gpu:
         try:
             logger.info("Initializing GPU Pipeline (Microsoft DiT Transformer)...")
             return DiTDiagramDetector(
@@ -242,22 +235,16 @@ def get_detector(
                 device="cuda",
             )
         except Exception as err:
-            logger.warning(
-                f"Failed to initialize GPU DiT pipeline ({err}). "
-                "Falling back to CPU YOLO pipeline."
+            logger.info(
+                f"DiT pipeline unavailable ({err}). "
+                "Using YOLO detector."
             )
-            return YOLODiagramDetector(
-                model_name=yolo_model_name,
-                default_conf_threshold=default_conf_threshold,
-                device="cpu",
-            )
-    else:
-        logger.info("Initializing CPU Pipeline (Ultralytics YOLO Fallback)...")
-        return YOLODiagramDetector(
-            model_name=yolo_model_name,
-            default_conf_threshold=default_conf_threshold,
-            device="cpu",
-        )
+
+    return YOLODiagramDetector(
+        model_name=yolo_model_name,
+        default_conf_threshold=default_conf_threshold,
+        device=device_str,
+    )
 
 
 def _load_as_pil_image(image_input: Union[str, Path, Image.Image, np.ndarray]) -> Image.Image:

@@ -77,6 +77,12 @@ class VLMModelManager:
 
             if self.runtime_info.device.startswith("cuda"):
                 model_kwargs["device_map"] = "auto"
+                try:
+                    total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                    safe_gpu_gb = max(1.5, total_vram_gb - 2.5)
+                    model_kwargs["max_memory"] = {0: f"{safe_gpu_gb:.1f}GiB", "cpu": "32GiB"}
+                except Exception:
+                    pass
             else:
                 model_kwargs["device_map"] = "cpu"
 

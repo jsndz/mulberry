@@ -33,10 +33,21 @@ class TrOCRTextRecognizer(BaseTextRecognizer):
                 TrOCRProcessor,
                 VisionEncoderDecoderModel,
                 ViTImageProcessor,
+                logging as hf_logging,
             )
 
-            self._device = "cuda" if self.device_type == DeviceType.GPU and torch.cuda.is_available() else "cpu"
-            logger.info(
+            # Suppress noisy HTTP client requests and model loading reports
+            hf_logging.set_verbosity_error()
+            logging.getLogger("httpx").setLevel(logging.ERROR)
+            logging.getLogger("httpx2").setLevel(logging.ERROR)
+            logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+
+            self._device = (
+                "cuda"
+                if (self.device_type in (DeviceType.GPU, DeviceType.AUTO) and torch.cuda.is_available())
+                else "cpu"
+            )
+            logger.debug(
                 f"Initializing TrOCRTextRecognizer [Model: '{self.model_name}', Device: {self._device}]..."
             )
 
@@ -52,7 +63,7 @@ class TrOCRTextRecognizer(BaseTextRecognizer):
             self._model.to(self._device)
             self._model.eval()
 
-            logger.info("TrOCRTextRecognizer successfully initialized.")
+            logger.debug("TrOCRTextRecognizer successfully initialized.")
         except ImportError as e:
             raise MissingModelError(
                 f"TrOCR backend requires 'torch' and 'transformers' packages: {e}"

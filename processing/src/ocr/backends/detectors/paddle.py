@@ -69,6 +69,7 @@ class PaddleTextDetector(BaseTextDetector):
                 "cpu_threads": self.config.cpu_threads,
                 "use_textline_orientation": False,  # Orientation handled separately
                 "enable_mkldnn": False,  # Disable MKLDNN to avoid PIR OneDNN instruction errors
+                "show_log": False,  # Suppress internal Paddle verbose logs
             }
 
             if engine_str:
@@ -77,8 +78,9 @@ class PaddleTextDetector(BaseTextDetector):
             if self.config.extra_params:
                 kwargs.update(self.config.extra_params)
 
-            logger.info(f"Initializing PaddleTextDetector (device={device_str})...")
+            logger.debug(f"Initializing PaddleTextDetector (device={device_str})...")
             self._engine = PaddleOCR(**kwargs)
+            logging.getLogger("ppocr").setLevel(logging.ERROR)
         except Exception as e:
             logger.error(f"Failed to initialize PaddleTextDetector: {e}")
             raise OCRInitializationError(f"Failed to initialize PaddleTextDetector: {e}") from e
@@ -89,43 +91,60 @@ class PaddleTextDetector(BaseTextDetector):
 
         regions: List[DetectedRegion] = []
         try:
-            results = list(self._engine.predict(image_bgr))
-            if not results:
-                return []
-
-            for page in results:
-                if isinstance(page, dict):
-                    polys = page.get("dt_polys") or page.get("dt_boxes") or page.get("rec_polys") or []
-                    scores = page.get("dt_scores") or page.get("rec_scores") or []
-
-                    if not scores:
-                        scores = [1.0] * len(polys)
-
-                    for poly_raw, score in zip(polys, scores):
-                        score_val = float(score)
-                        bbox, poly_coords = polygon_to_bbox(poly_raw)
+            if hasattr(self._engine, "ocr"):
+                ocr_output = self._engine.ocr(image_bgr, det=True, rec=False)
+                if not ocr_output:
+                    return []
+                boxes = ocr_output[0] if (len(ocr_output) > 0 and isinstance(ocr_output[0], list)) else ocr_output
+                for item in boxes:
+                    if isinstance(item, (list, tuple)) and len(item) >= 4:
+                        bbox, poly_coords = polygon_to_bbox(item)
                         regions.append(
                             DetectedRegion(
                                 polygon=poly_coords,
                                 bbox=bbox,
-                                confidence=min(1.0, max(0.0, score_val)),
+                                confidence=1.0,
                             )
                         )
-                elif isinstance(page, list):
-                    for item in page:
-                        if isinstance(item, list) and len(item) >= 1:
-                            poly_raw = item[0]
-                            score = 1.0
-                            if len(item) >= 2 and isinstance(item[1], (list, tuple)) and len(item[1]) >= 2:
-                                score = float(item[1][1])
+                return regions
+            else:
+                results = list(self._engine.predict(image_bgr))
+                if not results:
+                    return []
+
+                for page in results:
+                    if isinstance(page, dict):
+                        polys = page.get("dt_polys") or page.get("dt_boxes") or page.get("rec_polys") or []
+                        scores = page.get("dt_scores") or page.get("rec_scores") or []
+
+                        if not scores:
+                            scores = [1.0] * len(polys)
+
+                        for poly_raw, score in zip(polys, scores):
+                            score_val = float(score)
                             bbox, poly_coords = polygon_to_bbox(poly_raw)
                             regions.append(
                                 DetectedRegion(
                                     polygon=poly_coords,
                                     bbox=bbox,
-                                    confidence=min(1.0, max(0.0, score)),
+                                    confidence=min(1.0, max(0.0, score_val)),
                                 )
                             )
+                    elif isinstance(page, list):
+                        for item in page:
+                            if isinstance(item, list) and len(item) >= 1:
+                                poly_raw = item[0]
+                                score = 1.0
+                                if len(item) >= 2 and isinstance(item[1], (list, tuple)) and len(item[1]) >= 2:
+                                    score = float(item[1][1])
+                                bbox, poly_coords = polygon_to_bbox(poly_raw)
+                                regions.append(
+                                    DetectedRegion(
+                                        polygon=poly_coords,
+                                        bbox=bbox,
+                                        confidence=min(1.0, max(0.0, score)),
+                                    )
+                                )
         except Exception as e:
             logger.warning(f"Error during PaddleTextDetector execution: {e}")
             raise

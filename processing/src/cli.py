@@ -397,7 +397,30 @@ def run_extract_command(args: argparse.Namespace) -> None:
         print(f"❌ Error: Image file not found at '{image_path}'", file=sys.stderr)
         sys.exit(1)
 
-    from processing.extract import ExtractionConfig, HandwritingExtractionPipeline, HardwareTier
+    import logging
+    import os
+    import warnings
+
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+    warnings.filterwarnings("ignore", category=UserWarning, module="paddle.*")
+    warnings.filterwarnings("ignore", category=FutureWarning, module="transformers.*")
+    for name in ("httpx", "httpx2", "huggingface_hub", "urllib3", "ppocr", "paddle"):
+        logging.getLogger(name).setLevel(logging.ERROR)
+
+    try:
+        from transformers import logging as hf_logging
+        hf_logging.set_verbosity_error()
+    except ImportError:
+        pass
+
+    from processing.extract import (
+        ExtractionConfig,
+        HandwritingExtractionPipeline,
+        HardwareTier,
+        StageReporter,
+    )
+    from processing.extract.config import detect_hardware_tier
     from processing.extract.assembly import export_to_canonical, export_to_json
 
     device = args.device if args.device != "auto" else None
@@ -406,7 +429,10 @@ def run_extract_command(args: argparse.Namespace) -> None:
         "tier_2_balanced": HardwareTier.TIER_2_BALANCED,
         "tier_3_edge_cpu": HardwareTier.TIER_3_EDGE_CPU,
     }
-    tier = tier_map.get(args.tier, HardwareTier.TIER_1_MAX_ACCURACY)
+    if getattr(args, "tier", "auto") == "auto":
+        tier = detect_hardware_tier()
+    else:
+        tier = tier_map.get(args.tier, HardwareTier.TIER_2_BALANCED)
 
     config = ExtractionConfig(
         tier=tier,
@@ -416,42 +442,61 @@ def run_extract_command(args: argparse.Namespace) -> None:
         context_db_path=str(args.db) if args.db else None,
     )
     pipeline = HandwritingExtractionPipeline(config=config)
+    reporter = StageReporter(
+        verbose=getattr(args, "verbose", False),
+        quiet=getattr(args, "quiet", False),
+    )
+
+    debug_dir = None
+    if getattr(args, "verbose", False) or getattr(args, "debug_dir", None):
+        debug_dir = Path(args.debug_dir) if getattr(args, "debug_dir", None) else (image_path.parent / f"{image_path.stem}_debug")
+        debug_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"🚀 Running HCD-HTR Extraction ({tier.value}) on '{image_path.name}'...")
+    if debug_dir:
+        print(f"📁 Saving stage visual debug artifacts to: {debug_dir}\n")
     try:
         is_pdf = image_path.suffix.lower() == ".pdf"
         if is_pdf:
-            print("  📄 Detected multi-page PDF document. Splitting and processing pages...")
+            print("  📄 Detected multi-page PDF document. Splitting and processing pages...\n")
             canonical_doc = pipeline.process_multipage(
                 image_path,
                 dpi=getattr(args, "dpi", 300),
-                progress_callback=lambda cur, tot: print(f"  • Completed page {cur} of {tot}"),
+                progress_callback=lambda cur, tot: print(f"  • Completed page {cur} of {tot}\n"),
+                stage_callback=reporter.on_stage_event,
+                debug_dir=debug_dir,
             )
             json_str = canonical_doc.model_dump_json(indent=2)
-            print("\n--- Canonical Multi-Page Document Output ---")
-            print(json_str)
+            if getattr(args, "show_json", False) or (not args.export and not args.canonical and not args.output):
+                print("\n--- Canonical Multi-Page Document Output ---")
+                print(json_str)
 
             if args.canonical or args.output:
                 out_path = Path(args.canonical or args.output).resolve()
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(json_str)
-                print(f"\n✅ Multi-page Canonical Document saved to: {out_path}")
+                print(f"✅ Multi-page Canonical Document saved to: {out_path}")
         else:
-            doc = pipeline.process_document(image_path)
+            doc = pipeline.process_document(
+                image_path,
+                stage_callback=reporter.on_stage_event,
+                debug_dir=debug_dir,
+            )
             json_str = doc.model_dump_json(indent=2)
-            print("\n--- HCD-HTR Production JSON Schema Output ---")
-            print(json_str)
+            if getattr(args, "show_json", False) or (not args.export and not args.canonical and not args.output):
+                print("\n--- HCD-HTR Production JSON Schema Output ---")
+                print(json_str)
 
             if args.output:
                 out_path = Path(args.output).resolve()
                 export_to_json(doc, out_path)
-                print(f"\n✅ Extraction JSON saved to: {out_path}")
+                print(f"✅ Extraction JSON saved to: {out_path}")
 
             if args.canonical:
                 canon_path = Path(args.canonical).resolve()
                 export_to_canonical(doc, canon_path)
-                print(f"\n✅ Mulberry Canonical Document saved to: {canon_path}")
+                print(f"✅ Mulberry Canonical Document saved to: {canon_path}")
 
         if getattr(args, "export", None):
             from processing.exporters import export_document
@@ -460,7 +505,7 @@ def run_extract_command(args: argparse.Namespace) -> None:
             ext = ".md" if fmt in ("markdown", "md") else ".pdf"
             out_export_path = args.export_out or image_path.with_suffix(ext)
             export_document(export_doc, format=fmt, output_path=out_export_path)
-            print(f"\n✅ Exported document to {fmt.upper()}: {out_export_path}")
+            print(f"✅ Exported document to {fmt.upper()}: {out_export_path}")
 
     except Exception as e:
         print(f"❌ HCD-HTR Extraction failed: {e}", file=sys.stderr)
@@ -559,9 +604,9 @@ def main() -> None:
     extract_parser.add_argument("-c", "--canonical", type=Path, help="Path to save Mulberry Canonical Document JSON")
     extract_parser.add_argument(
         "--tier",
-        choices=["tier_1_max_accuracy", "tier_2_balanced", "tier_3_edge_cpu"],
-        default="tier_1_max_accuracy",
-        help="Hardware execution tier (default: tier_1_max_accuracy)"
+        choices=["auto", "tier_1_max_accuracy", "tier_2_balanced", "tier_3_edge_cpu"],
+        default="auto",
+        help="Hardware execution tier (default: auto, dynamically selects based on VRAM)",
     )
     extract_parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto", help="Execution device")
     extract_parser.add_argument("--db", type=Path, help="Custom SQLite context database path")
@@ -579,6 +624,29 @@ def main() -> None:
         type=Path,
         default=None,
         help="Custom destination path for exported Markdown or PDF",
+    )
+    extract_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Display verbose diagnostics and full line transcripts",
+    )
+    extract_parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Suppress real-time stage execution diagnostics",
+    )
+    extract_parser.add_argument(
+        "--show-json",
+        action="store_true",
+        help="Print the raw extracted document JSON schema to stdout",
+    )
+    extract_parser.add_argument(
+        "--debug-dir",
+        type=Path,
+        default=None,
+        help="Custom destination directory to save visual stage artifacts and line crops (auto-generated in -v mode)",
     )
 
     args = parser.parse_args()

@@ -41,6 +41,13 @@ class QwenVLRecognizer(BaseLineRecognizer):
     ) -> str:
         prompt = format_recognition_prompt(domain_glossary)
 
+        # Cap max crop dimensions to prevent visual token explosion in VRAM
+        max_dim = 1024
+        if max(crop_pil.size) > max_dim:
+            scale = max_dim / max(crop_pil.size)
+            new_size = (max(1, int(crop_pil.size[0] * scale)), max(1, int(crop_pil.size[1] * scale)))
+            crop_pil = crop_pil.resize(new_size, Image.Resampling.BILINEAR)
+
         try:
             output = self.model_manager.generate(
                 image=crop_pil,

@@ -19,9 +19,13 @@ from processing.extract.schemas import (
     ExtractionDocument,
 )
 from processing.extract.pipeline import HandwritingExtractionPipeline
+from processing.extract.reporter import StageReporter
+from processing.extract.visual_debugger import VisualDebugger
 
 __all__ = [
     "HandwritingExtractionPipeline",
+    "StageReporter",
+    "VisualDebugger",
     "ExtractionConfig",
     "HardwareTier",
     "ExtractionError",
